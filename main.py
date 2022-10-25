@@ -38,6 +38,15 @@ def lambda_handler(event, context):
     name_black = "Black-contour.jpg : " + dt 
     cv2.imwrite(name_black, x)
     s3.upload_file(name_black,'leafareainfo',name_black)
+    
+    url_b = s3.generate_presigned_url('get_object',
+                                Params={
+                                    'Bucket': 'leafareainfo',
+                                    'Key': name_black,
+                                },                                  
+                                ExpiresIn=3600)
+
+    print(url_b)                            
 
     def find_contour_areas(contours):
         areas = []
@@ -65,6 +74,15 @@ def lambda_handler(event, context):
     name_green = "Green-Contour.jpg : " + dtg
     cv2.imwrite(name_green, x)
     s3.upload_file(name_green,'leafareainfo',name_green)
+
+    url_g = s3.generate_presigned_url('get_object',
+                                Params={
+                                    'Bucket': 'leafareainfo',
+                                    'Key': name_green,
+                                },                                  
+                                ExpiresIn=3600)
+
+    print(url_g)                            
 
     def find_contour_areas(contoursG):
         areas = []
