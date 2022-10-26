@@ -1,23 +1,17 @@
 import cv2
 import numpy as np
-# import urllib
-# import urllib.request
 import json
 import boto3
 from datetime import datetime
-
 s3 = boto3.client('s3')
-# req = urllib.request.urlopen('https://leafareainfo.s3.ap-south-1.amazonaws.com/image.jpg')
-# arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
-# img = cv2.imdecode(arr, -1)
 
 def lambda_handler(event, context):
-    bucket_name = event["pathParameters"]["bucket"]
-    file_name = event["queryStringParameters"]["file"]
-    fileobj = s3.get_objects(Bucket=bucket_name, Key=file_name)
-    nparr = np.frombuffer(fileobj['Body'].read(), np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
+    img_url=str(json.loads(event['body'])['url'])
+    req = urllib.request.urlopen(img_url) # Image URL from fronend
+    arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
+    img = cv2.imdecode(arr, -1)
+    
+    
     resizeimg = cv2.resize(img, (400,400))
     resizeimg_copy = resizeimg.copy()
     hsv = cv2.cvtColor(resizeimg, cv2.COLOR_BGR2HSV)
@@ -39,14 +33,8 @@ def lambda_handler(event, context):
     cv2.imwrite(name_black, x)
     s3.upload_file(name_black,'leafareainfo',name_black)
     
-    url_b = s3.generate_presigned_url('get_object',
-                                Params={
-                                    'Bucket': 'leafareainfo',
-                                    'Key': name_black,
-                                },                                  
-                                ExpiresIn=3600)
+    url_b = f"https://leafareainfo.s3.ap-south-1.amazonaws.com/{name_black}"
 
-    print(url_b)                            
 
     def find_contour_areas(contours):
         areas = []
@@ -75,14 +63,7 @@ def lambda_handler(event, context):
     cv2.imwrite(name_green, x)
     s3.upload_file(name_green,'leafareainfo',name_green)
 
-    url_g = s3.generate_presigned_url('get_object',
-                                Params={
-                                    'Bucket': 'leafareainfo',
-                                    'Key': name_green,
-                                },                                  
-                                ExpiresIn=3600)
-
-    print(url_g)                            
+    url_g = f"https://leafareainfo.s3.ap-south-1.amazonaws.com/{name_black}"
 
     def find_contour_areas(contoursG):
         areas = []
@@ -104,9 +85,16 @@ def lambda_handler(event, context):
     actual_leaf_area = actual_frame_area/ratio
 
 
-    value = {
-    "frame-area" : actual_frame_area,
-    "leaf-area" : actual_leaf_area 
-    }
 
-    return json.dumps(value)
+    value = {
+        
+        'frame_area' : actual_frame_area,
+        'leaf_area' : actual_leaf_area,
+        'image_url_contour_b' : url_b,
+        'image_url_contou_g' : url_g
+        
+    }
+    return {
+        'statusCode': 200,
+        'body': json.dumps(value)
+    }
